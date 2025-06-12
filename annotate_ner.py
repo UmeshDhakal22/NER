@@ -13,8 +13,8 @@ class NERAnnotator:
         self.annotations = self._load_existing_annotations()
         self.current_index = 0
 
-    def _load_places(self) -> List[str]:
-        """Load places from the input CSV file."""
+    def _load_places(self) -> List[Tuple[int, str]]:
+        """Load places from the input CSV file and assign indices."""
         with open(self.input_file, 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
             # Skip header if exists
@@ -22,7 +22,8 @@ class NERAnnotator:
                 next(reader)  # Skip header
             except StopIteration:
                 pass
-            return [row[0].strip() for row in reader if row and row[0].strip()]
+            # Return list of (index, place) tuples
+            return [(i, row[0].strip()) for i, row in enumerate(reader) if row and row[0].strip()]
 
     def _load_existing_annotations(self) -> Dict[int, Dict[str, List[Tuple[int, int, str]]]]:
         """Load existing annotations if the output file exists."""
@@ -32,17 +33,26 @@ class NERAnnotator:
         annotations = {}
         with open(self.output_file, 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
-            next(reader)  # Skip header
+            try:
+                next(reader)  # Skip header
+            except StopIteration:
+                return annotations
+                
             for row in reader:
-                if not row:
+                if not row or len(row) < 2:  # Skip empty rows or rows without enough columns
                     continue
-                idx = int(row[0])
-                text = row[1]
-                entities = eval(row[2]) if len(row) > 2 else []
-                annotations[idx] = {
-                    'text': text,
-                    'entities': entities
-                }
+                try:
+                    # Convert to float first to handle both '0' and '0.0' formats, then to int
+                    idx = int(float(row[0]))
+                    text = row[1]
+                    entities = eval(row[2]) if len(row) > 2 and row[2].strip() else []
+                    annotations[idx] = {
+                        'text': text,
+                        'entities': entities
+                    }
+                except (ValueError, IndexError) as e:
+                    print(f"Warning: Could not parse row: {row}. Error: {e}")
+                    continue
         return annotations
 
     def save_annotations(self):
@@ -104,19 +114,19 @@ class NERAnnotator:
         print()
 
         while self.current_index < len(self.places):
-            place = self.places[self.current_index]
+            place_idx, place_text = self.places[self.current_index]
             
             # Skip if already annotated
-            if self.current_index in self.annotations:
+            if place_idx in self.annotations:
                 self.current_index += 1
                 continue
 
             print(f"\nPlace {self.current_index + 1}/{len(self.places)}")
-            print(f"Text: {place}")
+            print(f"Text: {place_text}")
             
             # Split into words and get character offsets
-            words = place.split()
-            char_offsets = self._get_char_offsets(place, words)
+            words = place_text.split()
+            char_offsets = self._get_char_offsets(place_text, words)
             entities = []
             i = 0
             
@@ -197,8 +207,8 @@ class NERAnnotator:
                     end = char_offsets[end_idx-1][1]
                     char_entities.append((start, end, label))
                 
-                self.annotations[self.current_index] = {
-                    'text': place,
+                self.annotations[place_idx] = {
+                    'text': place_text,
                     'entities': char_entities
                 }
             
