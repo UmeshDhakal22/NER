@@ -40,8 +40,7 @@ def test_single_text(nlp, text):
         print(f"  '{token.text}': {ent_type}")
     
     return doc
-    
-    return doc
+
 
 def test_from_file(nlp, file_path):
     """Test the model on a file with one text per line or JSON format."""
