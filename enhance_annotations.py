@@ -19,6 +19,7 @@ def main():
     annotations_file = base_dir / "ner_annotations.csv"
     places_file = base_dir / "places.json"
     types_file = base_dir / "type.json"
+    names_file = base_dir / "names.json"
     
     # Load existing annotations
     if annotations_file.exists():
@@ -55,6 +56,16 @@ def main():
             })
             existing_texts.add(type_name)
     
+    # Add names as NAME entities
+    names = load_json_list(names_file)
+    for name in names:
+        if name and name not in existing_texts:
+            new_entries.append({
+                'text': name,
+                'entities': f"[[0, {len(name)}, 'NAME']]"
+            })
+            existing_texts.add(name)
+
     # Add new entries to the DataFrame
     if new_entries:
         new_df = pd.DataFrame(new_entries)
