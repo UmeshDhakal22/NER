@@ -1,8 +1,7 @@
 .venv
-*.csv
-__pycache__
-output_model
-ner_annotations.json
-*.geojson
-*.json
-ner_model
+# *.csv
+# __pycache__
+# ner_annotations.json
+# *.geojson
+# *.json
+# ner_model
